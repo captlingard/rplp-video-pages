@@ -111,3 +111,218 @@ sitemap += "</urlset>\n"
 )
 
 print(f"Successfully generated homepage and sitemap for {len(articles)} articles.")
+
+
+
+# Automatically format individual video article pages
+
+def plain_text(value):
+    return " ".join(unescape(re.sub(r"<[^>]+>", "", value)).split())
+
+
+for file in sorted(PUBLIC.glob("videos/*/index.html")):
+    content = file.read_text(encoding="utf-8")
+    video_id = file.parent.name
+
+    if not re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id):
+        continue
+
+    # Prevent duplicate formatting
+    if "<!-- RPLP formatted page -->" in content:
+        continue
+
+    # Only format HTML article fragments
+    if re.search(r"<html\b", content, re.IGNORECASE):
+        continue
+
+    heading = re.search(
+        r"<h1\b[^>]*>(.*?)</h1>",
+        content,
+        re.IGNORECASE | re.DOTALL
+    )
+
+    title = plain_text(heading.group(1)) if heading else "Parking Lot Striping Project"
+
+    article = content
+
+    if heading:
+        article = content[:heading.start()] + content[heading.end():]
+
+    paragraph = re.search(
+        r"<p\b[^>]*>(.*?)</p>",
+        article,
+        re.IGNORECASE | re.DOTALL
+    )
+
+    description = plain_text(paragraph.group(1)) if paragraph else title
+
+    if len(description) > 160:
+        description = description[:157].rsplit(" ", 1)[0] + "..."
+
+    canonical = BASE_URL + "/videos/" + quote(video_id) + "/"
+    thumbnail = f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
+    video_url = f"https://www.youtube.com/watch?v={video_id}"
+    embed_url = f"https://www.youtube.com/embed/{video_id}"
+
+    page = f"""<!DOCTYPE html>
+<!-- RPLP formatted page -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{escape(title)} | Raleigh Parking Lot Painting LLC</title>
+<meta name="description" content="{escape(description)}">
+<link rel="canonical" href="{canonical}">
+<meta property="og:type" content="article">
+<meta property="og:title" content="{escape(title)}">
+<meta property="og:description" content="{escape(description)}">
+<meta property="og:url" content="{canonical}">
+<meta property="og:image" content="{thumbnail}">
+<meta name="twitter:card" content="summary_large_image">
+
+<style>
+* {{
+    box-sizing: border-box;
+}}
+body {{
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f4f6f8;
+    color: #222;
+    line-height: 1.75;
+}}
+header {{
+    background: #172b40;
+    color: white;
+    text-align: center;
+    padding: 40px 20px;
+}}
+.brand {{
+    font-size: 30px;
+    font-weight: bold;
+}}
+nav {{
+    margin-top: 20px;
+}}
+nav a {{
+    color: white;
+    margin: 0 12px;
+}}
+main {{
+    max-width: 1000px;
+    margin: 30px auto;
+    padding: 35px;
+    background: white;
+    border-radius: 8px;
+}}
+h1 {{
+    color: #172b40;
+    font-size: 32px;
+    line-height: 1.3;
+}}
+h2, h3 {{
+    color: #172b40;
+}}
+a {{
+    color: #17649c;
+}}
+.video {{
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    margin: 25px 0;
+}}
+.video iframe {{
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 8px;
+}}
+img {{
+    max-width: 100%;
+    height: auto;
+}}
+.cta {{
+    background: #edf2f6;
+    padding: 25px;
+    margin-top: 35px;
+    border-radius: 8px;
+    text-align: center;
+}}
+footer {{
+    background: #172b40;
+    color: white;
+    text-align: center;
+    padding: 30px 20px;
+}}
+footer a {{
+    color: white;
+}}
+@media (max-width: 600px) {{
+    main {{
+        margin: 12px;
+        padding: 20px;
+    }}
+    h1 {{
+        font-size: 26px;
+    }}
+    .brand {{
+        font-size: 24px;
+    }}
+}}
+</style>
+</head>
+
+<body>
+
+<header>
+<div class="brand">Raleigh Parking Lot Painting LLC</div>
+<p>Professional Parking Lot Striping Since 1985</p>
+<nav>
+<a href="/">All Projects</a>
+<a href="{COMPANY_URL}">Official Website</a>
+</nav>
+</header>
+
+<main>
+<article>
+
+<h1>{escape(title)}</h1>
+
+<div class="video">
+<iframe
+    src="{embed_url}"
+    title="{escape(title)}"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    allowfullscreen>
+</iframe>
+</div>
+
+<p><a href="{video_url}">Watch this video on YouTube</a></p>
+
+{article}
+
+</article>
+
+<div class="cta">
+<h2>Professional Parking Lot Striping</h2>
+<p>Serving Raleigh and surrounding North Carolina communities since 1985.</p>
+<p><a href="{COMPANY_URL}">Visit Raleigh Parking Lot Painting LLC</a></p>
+<p><a href="/">Explore More Parking Lot Striping Projects</a></p>
+</div>
+
+</main>
+
+<footer>
+<p>Raleigh Parking Lot Painting LLC | Family-run since 1985</p>
+<p>Dedicated to Quality, Built on Family, Focused on Your Business.</p>
+<a href="{COMPANY_URL}">Official Company Website</a>
+</footer>
+
+</body>
+</html>
+"""
+
+    file.write_text(page, encoding="utf-8")
+    print(f"Formatted video article: {video_id}")
+
+print("RPLP article formatting complete.")
