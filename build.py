@@ -326,3 +326,21 @@ footer a {{
     print(f"Formatted video article: {video_id}")
 
 print("RPLP article formatting complete.")
+
+
+# Automatically publish authentic RPLP photographs
+import shutil
+
+image_dir = Path("public/images")
+image_dir.mkdir(parents=True, exist_ok=True)
+
+image_count = 0
+
+for photo in Path(".").iterdir():
+    if photo.is_file() and photo.suffix.lower() in (
+        ".jpg", ".jpeg", ".png", ".webp"
+    ):
+        shutil.copy2(photo, image_dir / photo.name)
+        image_count += 1
+
+print(f"Published {image_count} RPLP photographs.")
